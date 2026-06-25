@@ -1,9 +1,10 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Sun, Moon, Wallet, ArrowLeftRight, Bell } from 'lucide-react';
+import { Menu, Sun, Moon, Wallet, ArrowLeftRight } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useToastStore } from '@/store/useToastStore';
+import NotificationBell from '@/components/notification-bell';
 
 interface NavbarProps {
   setMobileOpen: (open: boolean) => void;
@@ -116,14 +117,8 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
-        {/* Fake Notifications */}
-        <button
-          onClick={() => toast('Tidak ada notifikasi baru', 'info')}
-          className="p-2 rounded-xl border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors relative shrink-0"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
-        </button>
+        {/* Real Notification Bell */}
+        <NotificationBell />
       </div>
     </header>
   );

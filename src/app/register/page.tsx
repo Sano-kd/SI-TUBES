@@ -24,23 +24,38 @@ export default function RegisterPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !contact || !email || !password || !passwordConfirm) {
-      toast('Silahkan isi semua kolom!', 'error');
+    if (!name.trim()) {
+      toast('Nama wajib diisi.', 'error');
       return;
     }
-
+    if (role === 'penjual' && !canteenName.trim()) {
+      toast('Nama Kantin wajib diisi.', 'error');
+      return;
+    }
+    if (!contact.trim()) {
+      toast('Nomor kontak wajib diisi.', 'error');
+      return;
+    }
+    if (!email.trim()) {
+      toast('Email wajib diisi.', 'error');
+      return;
+    }
+    if (!password) {
+      toast('Password wajib diisi.', 'error');
+      return;
+    }
+    if (password.length < 8) {
+      toast('Password minimal 8 karakter.', 'error');
+      return;
+    }
     if (password !== passwordConfirm) {
       toast('Kata sandi dan konfirmasi kata sandi tidak cocok!', 'error');
       return;
     }
 
-    if (role === 'penjual' && !canteenName) {
-      toast('Nama Kantin wajib diisi untuk penjual!', 'error');
-      return;
-    }
-
     setLoading(true);
 
+    // Simulate small latency
     setTimeout(() => {
       const res = register({
         name,
@@ -48,13 +63,14 @@ export default function RegisterPage() {
         contact,
         role,
         canteenName: role === 'penjual' ? canteenName : undefined,
+        password,
         passwordConfirm
       });
       setLoading(false);
 
       if (res.success) {
-        toast('Akun berhasil dibuat. Selamat datang!', 'success');
-        router.push('/');
+        toast(res.message, 'success');
+        router.push('/login');
       } else {
         toast(res.message, 'error');
       }

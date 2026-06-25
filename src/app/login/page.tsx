@@ -19,8 +19,12 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast('Silahkan isi semua kolom!', 'error');
+    if (!email) {
+      toast('Email wajib diisi.', 'error');
+      return;
+    }
+    if (!password) {
+      toast('Password wajib diisi.', 'error');
       return;
     }
 

@@ -1,19 +1,20 @@
 'use client';
 
-import { Star, Plus, Check } from 'lucide-react';
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Star, Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Product, useStore } from '@/store/useStore';
-import { useToastStore } from '@/store/useToastStore';
+import { useRouter } from 'next/navigation';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const addToCart = useStore((state) => state.addToCart);
-  const toast = useToastStore((state) => state.toast);
-  const [added, setAdded] = useState(false);
+  const router = useRouter();
+  const users = useStore((state) => state.users);
+
+  const seller = users.find(u => u.id === product.sellerId);
+  const canteenName = seller?.canteenName || 'Kantin';
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -21,13 +22,6 @@ export default function ProductCard({ product }: ProductCardProps) {
       currency: 'IDR',
       minimumFractionDigits: 0
     }).format(val);
-  };
-
-  const handleAddToCart = () => {
-    addToCart(product);
-    setAdded(true);
-    toast(`${product.name} ditambahkan ke keranjang`, 'success', 2000);
-    setTimeout(() => setAdded(false), 1500);
   };
 
   // Badge background color map
@@ -43,7 +37,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       layout
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
-      className="bg-card border border-border rounded-2xl overflow-hidden shadow-soft hover:shadow-premium hover-scale flex flex-col h-full group"
+      onClick={() => router.push(`/mahasiswa/menu/${product.id}`)}
+      className="bg-card border border-border rounded-2xl overflow-hidden shadow-soft hover:shadow-premium hover-scale flex flex-col h-full group cursor-pointer"
     >
       {/* Product Image */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted shrink-0">
@@ -54,7 +49,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           loading="lazy"
         />
-        
+
         {/* Category Badge */}
         <span className={`absolute top-3 left-3 text-[11px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-md shadow-xs ${categoryColors[product.category]}`}>
           {product.category}
@@ -82,6 +77,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           <h4 className="font-bold text-sm tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
             {product.name}
           </h4>
+          <p className="text-[11px] text-primary font-semibold mt-0.5">
+            Kantin {canteenName}
+          </p>
           <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 h-8 leading-normal">
             {product.description}
           </p>
@@ -92,30 +90,22 @@ export default function ProductCard({ product }: ProductCardProps) {
             {formatRupiah(product.price)}
           </span>
 
-          <AnimatePresence mode="wait">
-            {product.available ? (
-              <motion.button
-                key={added ? 'checked' : 'add'}
-                onClick={handleAddToCart}
-                whileTap={{ scale: 0.95 }}
-                className={`p-2 rounded-xl transition-all flex items-center justify-center shrink-0
-                  ${added 
-                    ? 'bg-emerald-500 text-white' 
-                    : 'bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/20 hover:border-primary shadow-xs'
-                  }
-                `}
-              >
-                {added ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              </motion.button>
-            ) : (
-              <button
-                disabled
-                className="p-2 rounded-xl bg-muted text-muted-foreground border border-border shrink-0 cursor-not-allowed"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            )}
-          </AnimatePresence>
+          {product.available ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); router.push(`/mahasiswa/menu/${product.id}`); }}
+              className="p-2 rounded-xl transition-all flex items-center justify-center shrink-0 bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/20 hover:border-primary shadow-xs cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              disabled
+              className="p-2 rounded-xl bg-muted text-muted-foreground border border-border shrink-0 cursor-not-allowed"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

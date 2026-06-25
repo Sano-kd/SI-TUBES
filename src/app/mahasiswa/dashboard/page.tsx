@@ -42,12 +42,28 @@ export default function StudentDashboard() {
             <span className="bg-white/10 border border-white/20 text-orange-50 font-bold text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-lg">
               Campus e-Kantin
             </span>
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mt-3">
-              Hello, {currentUser.name} 👋
-            </h1>
-            <p className="text-sm text-orange-100/90 mt-2 font-medium leading-relaxed">
-              Mau makan siang apa hari ini? Cari makanan terlezat di kantin kampus sekarang, langsung ambil tanpa antre!
-            </p>
+          <div className="flex items-center gap-4">
+            {currentUser.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={currentUser.avatar}
+                alt="Foto Profil"
+                className="w-14 h-14 rounded-full border-2 border-white object-cover shadow-md shrink-0"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full border-2 border-white bg-primary/20 text-white flex items-center justify-center font-bold text-lg shrink-0">
+                {currentUser.name.charAt(0)}
+              </div>
+            )}
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+                Hello, {currentUser.name}
+              </h1>
+            </div>
+          </div>
+          <p className="text-xs sm:text-sm text-orange-100/95 font-medium leading-relaxed mt-3">
+            Mau makan siang apa hari ini?Cari makanan terlezat di kantin kampus sekarang.Langsung ambil tanpa antre.
+          </p>
           </div>
 
           {/* Quick Search Input */}

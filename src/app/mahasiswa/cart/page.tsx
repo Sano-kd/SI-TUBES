@@ -2,16 +2,21 @@
 
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, ArrowLeft, Receipt, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, ShieldCheck, Store, CheckSquare, Square } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import CartItem from '@/components/cart-item';
 
 export default function CartPage() {
   const router = useRouter();
   const cart = useStore((state) => state.cart);
-  
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const serviceFee = subtotal > 0 ? 2000 : 0; // Rp2.000 campus service fee
+  const users = useStore((state) => state.users);
+  const toggleAllCartItemsChecked = useStore((state) => state.toggleAllCartItemsChecked);
+
+  const checkedItems = cart.filter(item => item.checked);
+  const allChecked = cart.length > 0 && cart.every(item => item.checked);
+
+  const subtotal = checkedItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const serviceFee = subtotal > 0 ? 2000 : 0;
   const total = subtotal + serviceFee;
 
   const formatRupiah = (val: number) => {
@@ -22,13 +27,22 @@ export default function CartPage() {
     }).format(val);
   };
 
+  // Group cart items by canteen
+  const itemsBySeller: { [sellerId: string]: typeof cart } = {};
+  cart.forEach(item => {
+    const sId = item.product.sellerId || 'unknown';
+    if (!itemsBySeller[sId]) itemsBySeller[sId] = [];
+    itemsBySeller[sId].push(item);
+  });
+
   const handleCheckout = () => {
+    if (checkedItems.length === 0) return;
     router.push('/mahasiswa/checkout');
   };
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Back button link */}
+      {/* Back button */}
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -60,26 +74,61 @@ export default function CartPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Cart Items List */}
-          <div className="lg:col-span-2 space-y-3">
-            <h3 className="font-extrabold text-base text-foreground mb-4">Daftar Hidangan</h3>
-            
-            <AnimatePresence mode="popLayout">
-              {cart.map((item) => (
-                <CartItem key={item.product.id} item={item} />
-              ))}
-            </AnimatePresence>
+          <div className="lg:col-span-2 space-y-4">
+            {/* Select All */}
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-base text-foreground">
+                Daftar Hidangan ({cart.length} item)
+              </h3>
+              <button
+                onClick={() => toggleAllCartItemsChecked(!allChecked)}
+                className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+              >
+                {allChecked
+                  ? <CheckSquare className="w-4 h-4 text-primary" />
+                  : <Square className="w-4 h-4" />
+                }
+                <span>{allChecked ? 'Batal Pilih Semua' : 'Pilih Semua'}</span>
+              </button>
+            </div>
+
+            {/* Items grouped by canteen */}
+            {Object.entries(itemsBySeller).map(([sellerId, sellerItems]) => {
+              const seller = users.find(u => u.id === sellerId);
+              const canteenName = seller?.canteenName || 'Kantin';
+              return (
+                <div key={sellerId} className="space-y-2">
+                  {/* Canteen header */}
+                  <div className="flex items-center gap-2 px-1">
+                    <Store className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-extrabold text-foreground">Kantin {canteenName}</span>
+                  </div>
+
+                  <AnimatePresence mode="popLayout">
+                    {sellerItems.map((item) => (
+                      <CartItem key={item.id} item={item} />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
 
           {/* Pricing Breakdown Sidebar */}
-          <div className="space-y-4">
-            <h3 className="font-extrabold text-base text-foreground mb-4">Ringkasan Tagihan</h3>
-            
+          <div className="space-y-4 lg:sticky lg:top-4">
+            <h3 className="font-extrabold text-base text-foreground">Ringkasan Tagihan</h3>
+
             <div className="p-6 bg-card border border-border rounded-2xl shadow-soft space-y-4">
+              {/* Checked items summary */}
+              <div className="text-xs text-muted-foreground pb-3 border-b border-border/60">
+                <span>{checkedItems.length} dari {cart.length} item dipilih</span>
+              </div>
+
               <div className="flex items-center justify-between text-xs pb-3 border-b border-border/60">
                 <span className="text-muted-foreground">Subtotal Makanan</span>
                 <span className="font-bold text-foreground">{formatRupiah(subtotal)}</span>
               </div>
-              
+
               <div className="flex items-center justify-between text-xs pb-3 border-b border-border/60">
                 <span className="text-muted-foreground">Biaya Layanan Kantin</span>
                 <span className="font-bold text-foreground">{formatRupiah(serviceFee)}</span>
@@ -98,11 +147,18 @@ export default function CartPage() {
 
               <button
                 onClick={handleCheckout}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 hover:shadow-lg transition-all cursor-pointer"
+                disabled={checkedItems.length === 0}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 hover:shadow-lg transition-all cursor-pointer"
               >
                 <span>Lanjut ke Pembayaran</span>
                 <ArrowLeft className="w-4 h-4 rotate-180" />
               </button>
+
+              {checkedItems.length === 0 && (
+                <p className="text-center text-[11px] text-muted-foreground">
+                  Pilih minimal 1 item untuk checkout
+                </p>
+              )}
             </div>
           </div>
         </div>

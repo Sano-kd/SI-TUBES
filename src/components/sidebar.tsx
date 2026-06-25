@@ -17,7 +17,8 @@ import {
   LogOut, 
   ChevronLeft, 
   ChevronRight,
-  Coffee
+  Coffee,
+  X
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useToastStore } from '@/store/useToastStore';
@@ -111,10 +112,20 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
               )}
             </Link>
 
+            {/* Mobile Close Button */}
+            {mobileOpen && (
+              <button 
+                onClick={() => setMobileOpen && setMobileOpen(false)}
+                className="md:hidden p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+
             {/* Desktop Collapse Toggle */}
             <button 
               onClick={toggleSidebar}
-              className="hidden md:flex p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              className="hidden md:flex p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer"
             >
               {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </button>
@@ -173,48 +184,52 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
           </nav>
         </div>
 
-        {/* Lower Portion (User profile summary & logout) */}
-        <div className="p-3 border-t border-border space-y-2">
+        {/* Lower Portion (User profile summary & logout icon button) */}
+        <div className="p-3 border-t border-border flex items-center justify-between gap-2">
           {/* User info */}
-          {!isCollapsed && (
-            <div className="flex items-center gap-3 p-2">
-              {currentUser.avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img 
-                  src={currentUser.avatar} 
-                  alt={currentUser.name} 
-                  className="w-10 h-10 rounded-xl bg-muted object-cover border border-border shrink-0" 
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                  {currentUser.name.charAt(0)}
-                </div>
-              )}
-              <div className="overflow-hidden">
-                <p className="text-sm font-semibold truncate leading-none mb-1">{currentUser.name}</p>
-                <p className="text-xs text-muted-foreground truncate font-mono">
-                  {role === 'mahasiswa' ? 'Mahasiswa' : currentUser.canteenName || 'Penjual'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all duration-200 group relative
-              ${isCollapsed ? 'justify-center' : ''}
-            `}
-          >
-            <LogOut className="w-5 h-5 shrink-0" />
-            {!isCollapsed && <span className="text-sm font-medium">Keluar</span>}
-            
-            {isCollapsed && (
+          {isCollapsed ? (
+            <button
+              onClick={handleLogout}
+              className="w-full flex justify-center p-3 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all duration-200 relative group cursor-pointer border border-transparent"
+              title="Keluar"
+            >
+              <LogOut className="w-5 h-5" />
               <div className="absolute left-full ml-3 px-2 py-1 bg-destructive text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 whitespace-nowrap shadow-md">
                 Keluar
               </div>
-            )}
-          </button>
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center gap-2.5 min-w-0 p-1">
+                {currentUser.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img 
+                    src={currentUser.avatar} 
+                    alt={currentUser.name} 
+                    className="w-9 h-9 rounded-xl bg-muted object-cover border border-border shrink-0" 
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                    {currentUser.name.charAt(0)}
+                  </div>
+                )}
+                <div className="overflow-hidden">
+                  <p className="text-xs font-bold text-foreground truncate leading-none mb-1">{currentUser.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate font-mono">
+                    {role === 'mahasiswa' ? 'Mahasiswa' : currentUser.canteenName || 'Penjual'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive border border-transparent transition-colors shrink-0 cursor-pointer"
+                title="Keluar"
+              >
+                <LogOut className="w-4.5 h-4.5" />
+              </button>
+            </>
+          )}
         </div>
       </aside>
     </>

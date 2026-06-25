@@ -29,13 +29,21 @@ export default function SellerProfilePage() {
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !canteenName || !contact) {
-      toast('Semua kolom wajib diisi!', 'error');
+    if (!name.trim()) {
+      toast('Nama wajib diisi.', 'error');
+      return;
+    }
+    if (!canteenName.trim()) {
+      toast('Nama Kantin wajib diisi.', 'error');
+      return;
+    }
+    if (!contact.trim()) {
+      toast('Nomor kontak wajib diisi.', 'error');
       return;
     }
 
     updateProfile({ name, canteenName, contact, avatar: avatar || undefined });
-    toast('Profil kantin berhasil diperbarui!', 'success');
+    toast('Profil berhasil diperbarui.', 'success');
     setEditDialogOpen(false);
   };
 

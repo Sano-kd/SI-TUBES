@@ -2,17 +2,21 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CookingPot, Plus, Edit2, Trash2, CheckCircle2, XCircle, ToggleLeft, ToggleRight, Sparkles } from 'lucide-react';
+import { CookingPot, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Sparkles, X } from 'lucide-react';
 import { Product, useStore } from '@/store/useStore';
 import { useToastStore } from '@/store/useToastStore';
 import Dialog from '@/components/ui/dialog';
 
 export default function SellerMenuPage() {
+  const currentUser = useStore((state) => state.currentUser);
   const products = useStore((state) => state.products);
   const addProduct = useStore((state) => state.addProduct);
   const updateProduct = useStore((state) => state.updateProduct);
   const deleteProduct = useStore((state) => state.deleteProduct);
   const toast = useToastStore((state) => state.toast);
+
+  // Filter products for this specific canteen seller
+  const sellerProducts = currentUser ? products.filter((p) => p.sellerId === currentUser.id) : [];
 
   // Modal / Form States
   const [modalOpen, setModalOpen] = useState(false);
@@ -20,11 +24,17 @@ export default function SellerMenuPage() {
 
   // Form Field States
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<Product['category']>('Food');
+  const [category, setCategory] = useState<Product['category'] | ''>('');
   const [price, setPrice] = useState('');
   const [image, setImage] = useState('');
   const [description, setDescription] = useState('');
   const [available, setAvailable] = useState(true);
+
+  // Dynamic variation fields
+  const [variationTitle, setVariationTitle] = useState('');
+  const [variationOptions, setVariationOptions] = useState('');
+
+  if (!currentUser) return null;
 
   const formatRupiah = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -37,11 +47,13 @@ export default function SellerMenuPage() {
   const handleOpenAdd = () => {
     setEditingId(null);
     setName('');
-    setCategory('Food');
+    setCategory('');
     setPrice('');
     setImage('');
     setDescription('');
     setAvailable(true);
+    setVariationTitle('');
+    setVariationOptions('');
     setModalOpen(true);
   };
 
@@ -53,32 +65,69 @@ export default function SellerMenuPage() {
     setImage(product.image);
     setDescription(product.description);
     setAvailable(product.available);
+
+    if (product.orderOptions && product.orderOptions.length > 0) {
+      setVariationTitle(product.orderOptions[0].title);
+      setVariationOptions(product.orderOptions[0].options.join(', '));
+    } else {
+      setVariationTitle('');
+      setVariationOptions('');
+    }
     setModalOpen(true);
   };
 
   const handleToggleAvailable = (productId: string, currentVal: boolean) => {
     updateProduct(productId, { available: !currentVal });
-    toast(`Status ketersediaan menu diubah`, 'success');
+    toast('Status ketersediaan menu diubah.', 'success');
   };
 
   const handleDelete = (productId: string, name: string) => {
     if (confirm(`Apakah Anda yakin ingin menghapus "${name}" dari menu?`)) {
       deleteProduct(productId);
-      toast(`Menu "${name}" berhasil dihapus`, 'info');
+      toast('Data berhasil dihapus.', 'success');
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const priceNum = Number(price);
 
-    if (!name || isNaN(priceNum) || priceNum <= 0) {
-      toast('Formulir tidak valid!', 'error');
+    if (!name.trim()) {
+      toast('Nama wajib diisi.', 'error');
+      return;
+    }
+    if (!category) {
+      toast('Kategori wajib dipilih.', 'error');
+      return;
+    }
+    const priceNum = Number(price);
+    if (!price || isNaN(priceNum) || priceNum <= 0) {
+      toast('Harga wajib diisi.', 'error');
+      return;
+    }
+    if (!image) {
+      toast('Upload gambar terlebih dahulu.', 'error');
       return;
     }
 
-    // Default placeholder image if empty
-    const imgUrl = image.trim() || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=60';
+    // Build custom variation option if input exists
+    const orderOptions: Product['orderOptions'] = [];
+    if (variationTitle.trim() && variationOptions.trim()) {
+      orderOptions.push({
+        title: variationTitle.trim(),
+        options: variationOptions.split(',').map(o => o.trim()).filter(Boolean)
+      });
+    }
 
     if (editingId) {
       // Edit
@@ -86,22 +135,25 @@ export default function SellerMenuPage() {
         name,
         category,
         price: priceNum,
-        image: imgUrl,
+        image,
         description,
-        available
+        available,
+        orderOptions: orderOptions.length > 0 ? orderOptions : undefined
       });
-      toast(`Menu "${name}" berhasil diperbarui`, 'success');
+      toast('Data berhasil diperbarui.', 'success');
     } else {
       // Add
       addProduct({
         name,
         category,
         price: priceNum,
-        image: imgUrl,
+        image,
         description,
-        available
+        available,
+        sellerId: currentUser.id,
+        orderOptions: orderOptions.length > 0 ? orderOptions : undefined
       });
-      toast(`Menu "${name}" berhasil ditambahkan!`, 'success');
+      toast('Data berhasil disimpan.', 'success');
     }
 
     setModalOpen(false);
@@ -127,7 +179,7 @@ export default function SellerMenuPage() {
       {/* Responsive List of products for the Canteen Seller */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <AnimatePresence mode="popLayout">
-          {products.map((product) => (
+          {sellerProducts.map((product) => (
             <motion.div
               key={product.id}
               layout
@@ -166,6 +218,12 @@ export default function SellerMenuPage() {
                   <p className="text-xs text-muted-foreground line-clamp-1 mt-1 leading-normal">
                     {product.description || 'Tidak ada deskripsi.'}
                   </p>
+
+                  {product.orderOptions && product.orderOptions.length > 0 && (
+                    <p className="text-[9px] text-muted-foreground mt-1 bg-muted px-1.5 py-0.5 rounded truncate">
+                      💡 Variasi: {product.orderOptions[0].title} ({product.orderOptions[0].options.join(', ')})
+                    </p>
+                  )}
                   
                   <p className="text-xs font-extrabold text-foreground mt-1.5">
                     {formatRupiah(product.price)}
@@ -174,7 +232,6 @@ export default function SellerMenuPage() {
 
                 {/* Edit, Delete, Toggle Availability buttons */}
                 <div className="flex items-center justify-between border-t border-border/40 pt-2 mt-2">
-                  {/* Availability quick switch toggle */}
                   <button
                     onClick={() => handleToggleAvailable(product.id, product.available)}
                     className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -239,6 +296,7 @@ export default function SellerMenuPage() {
                 onChange={(e) => setCategory(e.target.value as Product['category'])}
                 className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground font-bold"
               >
+                <option value="">-- Pilih Kategori --</option>
                 <option value="Food">Food 🍔</option>
                 <option value="Drink">Drink 🥤</option>
                 <option value="Dessert">Dessert 🍰</option>
@@ -262,17 +320,65 @@ export default function SellerMenuPage() {
             </div>
           </div>
 
+          {/* Manual image upload with FileReader preview */}
           <div>
             <label className="text-xs font-bold text-muted-foreground block mb-1.5">
-              Tautan Foto Menu (Unsplash URL)
+              Foto Menu Makanan/Minuman
             </label>
-            <input
-              type="text"
-              placeholder="Kosongkan untuk menggunakan foto default"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground text-xs"
-            />
+            <div className="flex flex-col gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:cursor-pointer"
+              />
+              {image && (
+                <div className="relative h-32 w-full rounded-xl overflow-hidden border border-border mt-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={image} alt="Preview Gambar" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setImage('')}
+                    className="absolute top-2 right-2 p-1.5 bg-zinc-950/60 hover:bg-zinc-950/80 text-white rounded-full transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Custom menu details/variations */}
+          <div className="p-3.5 bg-muted/40 border border-border/40 rounded-2xl space-y-3">
+            <h5 className="font-bold text-xs text-foreground block">
+              Variasi Menu Kustom
+            </h5>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="text-[10px] text-muted-foreground font-bold block mb-1">
+                  Nama Variasi (cth. Pilihan Nasi)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Judul variasi"
+                  value={variationTitle}
+                  onChange={(e) => setVariationTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:outline-hidden text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground font-bold block mb-1">
+                  Opsi (pisahkan dengan koma)
+                </label>
+                <input
+                  type="text"
+                  placeholder="cth. Nasi Putih, Nasi Uduk"
+                  value={variationOptions}
+                  onChange={(e) => setVariationOptions(e.target.value)}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:outline-hidden text-xs"
+                />
+              </div>
+            </div>
           </div>
 
           <div>
