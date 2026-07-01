@@ -24,8 +24,11 @@ export default function SellerProfilePage() {
 
   if (!currentUser) return null;
 
-  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-  const totalOrders = orders.length;
+  const sellerCompletedOrders = orders
+    ? orders.filter((o) => o.sellerId === currentUser.id && o.status === 'Selesai')
+    : [];
+  const totalRevenue = sellerCompletedOrders.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+  const totalOrders = sellerCompletedOrders.length || 0;
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
