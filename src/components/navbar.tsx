@@ -16,7 +16,7 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
   const currentUser = useStore((state) => state.currentUser);
   const users = useStore((state) => state.users);
   const login = useStore((state) => state.login);
-  
+
   const darkMode = useStore((state) => state.darkMode);
   const setDarkMode = useStore((state) => state.setDarkMode);
   const toast = useToastStore((state) => state.toast);
@@ -56,7 +56,7 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
   // Get Page Title from pathname
   const getPageTitle = () => {
     if (pathname.includes('/dashboard')) return 'Dashboard';
-    if (pathname.includes('/menu')) return pathname.includes('/mahasiswa') ? 'Menu Kantin' : 'Kelola Menu';
+    if (pathname.includes('/menu')) return pathname.includes('/mahasiswa') ? 'Daftar Kantin' : 'Kelola Menu';
     if (pathname.includes('/cart')) return 'Keranjang Belanja';
     if (pathname.includes('/checkout')) return 'Konfirmasi Checkout';
     if (pathname.includes('/success')) return 'Pembayaran Sukses';
@@ -67,7 +67,7 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-20 border-b border-border bg-card/80 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-30">
       <div className="flex items-center gap-3">
         {/* Mobile Hamburger Trigger */}
         <button
@@ -86,7 +86,7 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
       <div className="flex items-center gap-2 md:gap-4">
         {/* Student Balance Shortcut */}
         {currentUser.role === 'mahasiswa' && (
-          <button 
+          <button
             onClick={() => router.push('/mahasiswa/wallet')}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-background hover:bg-muted hover:border-primary/30 transition-all text-sm group shrink-0"
           >
