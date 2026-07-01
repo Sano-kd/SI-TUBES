@@ -288,99 +288,6 @@ const INITIAL_PRODUCTS: Product[] = [
     ]
   },
 
-  // Kantin Sejahtera (usr-seller-2) - Foods
-  {
-    id: 'prod-9',
-    name: 'Beef Teriyaki Bowl',
-    category: 'Food',
-    price: 30000,
-    rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=600&auto=format&fit=crop&q=60',
-    description: 'Irisan daging sapi empuk dimasak saus teriyaki manis gurih, bawang bombay, taburan wijen di atas nasi.',
-    available: true,
-    sellerId: 'usr-seller-2',
-    orderOptions: [
-      { title: 'Pilihan Nasi', options: ['Tidak pakai nasi', 'Nasi sedikit', 'Nasi normal', 'Tambah nasi'] },
-      { title: 'Topping', options: ['Tanpa topping', 'Tambah telur', 'Tambah keju'] },
-    ]
-  },
-  {
-    id: 'prod-10',
-    name: 'Kwetiau Sapi Goreng',
-    category: 'Food',
-    price: 23000,
-    rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&auto=format&fit=crop&q=60',
-    description: 'Kwetiau kenyal digoreng dengan irisan daging sapi tipis, toge segar, telur bebek orak-arik.',
-    available: true,
-    sellerId: 'usr-seller-2',
-    orderOptions: [
-      { title: 'Level Pedas', options: ['Tidak pedas', 'Sedang', 'Pedas'] },
-      { title: 'Topping', options: ['Tanpa topping', 'Tambah telur bebek', 'Tambah ceker'] },
-    ]
-  },
-  // Kantin Sejahtera - Drinks
-  {
-    id: 'prod-11',
-    name: 'Avocado Juice Premium',
-    category: 'Drink',
-    price: 14000,
-    rating: 4.6,
-    image: 'https://images.unsplash.com/photo-1589733901241-5e53429e1db4?w=600&auto=format&fit=crop&q=60',
-    description: 'Jus buah alpukat mentega segar kental disajikan dengan susu kental manis cokelat di sekeliling gelas.',
-    available: true,
-    sellerId: 'usr-seller-2',
-    orderOptions: [
-      { title: 'Tingkat Manis', options: ['Less sweet', 'Normal', 'Extra sweet'] },
-      { title: 'Tanpa susu kental manis', options: ['Dengan SKM', 'Tanpa SKM'] },
-    ]
-  },
-  {
-    id: 'prod-12',
-    name: 'Vietnamese Drip Coffee',
-    category: 'Drink',
-    price: 16000,
-    rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=60',
-    description: 'Seduhan kopi robusta pekat khas vietnam menetes perlahan di atas susu kental manis lezat.',
-    available: true,
-    sellerId: 'usr-seller-2',
-    orderOptions: [
-      { title: 'Suhu', options: ['Hot', 'Iced'] },
-      { title: 'Tingkat Manis', options: ['Tanpa gula', 'Less sweet', 'Normal'] },
-    ]
-  },
-  // Kantin Sejahtera - Dessert
-  {
-    id: 'prod-13',
-    name: 'Tiramisu Slice Classic',
-    category: 'Dessert',
-    price: 22000,
-    rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=600&auto=format&fit=crop&q=60',
-    description: 'Dessert klasik Italia berlapis biskuit ladyfinger terendam espresso, keju mascarpone lembut, bubuk cokelat.',
-    available: true,
-    sellerId: 'usr-seller-2',
-    orderOptions: [
-      { title: 'Porsi', options: ['1 slice', '2 slice'] },
-    ]
-  },
-  // Kantin Sejahtera - Snack
-  {
-    id: 'prod-14',
-    name: 'Cireng Rujak Garing',
-    category: 'Snack',
-    price: 10000,
-    rating: 4.5,
-    image: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=600&auto=format&fit=crop&q=60',
-    description: 'Cireng aci goreng garing krispi di luar lembut kenyal di dalam dicocol bumbu rujak pedas manis asam.',
-    available: true,
-    sellerId: 'usr-seller-2',
-    orderOptions: [
-      { title: 'Level Pedas Bumbu', options: ['Tidak pedas', 'Sedang', 'Pedas', 'Extra pedas'] },
-      { title: 'Porsi', options: ['Reguler (10 pcs)', 'Jumbo (20 pcs)'] },
-    ]
-  },
 ];
 
 const INITIAL_USERS: User[] = [
@@ -403,17 +310,6 @@ const INITIAL_USERS: User[] = [
     balance: 250000,
     avatar: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=150&auto=format&fit=crop&q=60',
     canteenName: 'Mencintai',
-    password: 'password'
-  },
-  {
-    id: 'usr-seller-2',
-    name: 'Dewi Rahayu',
-    email: 'kantin@sejahtera.id',
-    role: 'penjual',
-    contact: '081222333444',
-    balance: 100000,
-    avatar: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=150&auto=format&fit=crop&q=60',
-    canteenName: 'Sejahtera',
     password: 'password'
   }
 ];
@@ -506,26 +402,6 @@ const INITIAL_ORDERS: Order[] = [
     status: 'Diterima',
     date: '2026-06-24T10:45:00.000Z',
     sellerId: 'usr-2'
-  },
-  {
-    id: 'TX-10004',
-    buyerId: 'usr-1',
-    buyerName: 'Kadek Sudarsana',
-    items: [
-      {
-        productId: 'prod-9',
-        productName: 'Beef Teriyaki Bowl',
-        price: 30000,
-        quantity: 1,
-        image: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=150&auto=format&fit=crop&q=60',
-        selectedOptions: { 'Pilihan Nasi': 'Nasi normal', 'Topping': 'Tambah telur' }
-      },
-    ],
-    total: 30000,
-    paymentMethod: 'Saldo',
-    status: 'Diproses',
-    date: '2026-06-25T11:00:00.000Z',
-    sellerId: 'usr-seller-2'
   }
 ];
 
