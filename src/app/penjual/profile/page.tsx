@@ -1,74 +1,145 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Store, Phone, Mail, LogOut, Save, Edit3, Settings, DollarSign, Receipt } from 'lucide-react';
-import { useStore } from '@/store/useStore';
-import { useToastStore } from '@/store/useToastStore';
-import Dialog from '@/components/ui/dialog';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Store,
+  LogOut,
+  Save,
+  Edit3,
+  Settings,
+  DollarSign,
+  Receipt,
+} from "lucide-react";
+import { useStore } from "@/store/useStore";
+import { useToastStore } from "@/store/useToastStore";
+import Dialog from "@/components/ui/dialog";
 
 export default function SellerProfilePage() {
   const router = useRouter();
   const currentUser = useStore((state) => state.currentUser);
-  const updateProfile = useStore((state) => state.updateProfile);
+  const setCurrentUser = useStore((state) => state.setCurrentUser);
   const logout = useStore((state) => state.logout);
-  const orders = useStore((state) => state.orders);
+
   const toast = useToastStore((state) => state.toast);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [name, setName] = useState(currentUser?.name || '');
-  const [canteenName, setCanteenName] = useState(currentUser?.canteenName || '');
-  const [contact, setContact] = useState(currentUser?.contact || '');
-  const [avatar, setAvatar] = useState(currentUser?.avatar || '');
+  const [name, setName] = useState(currentUser?.name || "");
+  const [canteenName, setCanteenName] = useState(
+    currentUser?.canteenName || "",
+  );
+  const [contact, setContact] = useState(currentUser?.contact || "");
+  const [avatar, setAvatar] = useState(currentUser?.avatar || "");
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [completedOrdersCount, setCompletedOrdersCount] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "penjual") {
+      return;
+    }
+
+    const fetchProfileData = async () => {
+      try {
+        const response = await fetch(
+          `/api/seller/dashboard?sellerId=${currentUser.id}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || "Gagal mengambil statistik profil penjual",
+          );
+        }
+
+        setTotalRevenue(result.data.totalRevenue);
+        setCompletedOrdersCount(result.data.completedOrdersCount);
+      } catch (error) {
+        console.error("FETCH SELLER PROFILE STATS ERROR:", error);
+      }
+    };
+
+    fetchProfileData();
+  }, [currentUser?.id, currentUser?.role]);
 
   if (!currentUser) return null;
 
-  const sellerCompletedOrders = orders
-    ? orders.filter((o) => o.sellerId === currentUser.id && o.status === 'Selesai')
-    : [];
-  const totalRevenue = sellerCompletedOrders.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
-  const totalOrders = sellerCompletedOrders.length || 0;
-
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!name.trim()) {
-      toast('Nama wajib diisi.', 'error');
+      toast("Nama wajib diisi.", "error");
       return;
     }
+
     if (!canteenName.trim()) {
-      toast('Nama Kantin wajib diisi.', 'error');
+      toast("Nama Kantin wajib diisi.", "error");
       return;
     }
+
     if (!contact.trim()) {
-      toast('Nomor kontak wajib diisi.', 'error');
+      toast("Nomor kontak wajib diisi.", "error");
       return;
     }
 
-    updateProfile({ name, canteenName, contact, avatar: avatar || undefined });
-    toast('Profil berhasil diperbarui.', 'success');
-    setEditDialogOpen(false);
-  };
+    try {
+      const response = await fetch(`/api/users/${currentUser.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          canteenName,
+          contact,
+          avatar,
+        }),
+      });
 
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Gagal memperbarui profil");
+      }
+
+      setCurrentUser(result.data);
+
+      toast("Profil berhasil diperbarui.", "success");
+      setEditDialogOpen(false);
+    } catch (error) {
+      console.error("UPDATE SELLER PROFILE ERROR:", error);
+
+      toast(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan saat memperbarui profil.",
+        "error",
+      );
+    }
+  };
   const handleLogout = () => {
     logout();
-    toast('Anda telah keluar dari akun.', 'info');
-    router.push('/login');
+    toast("Anda telah keluar dari akun.", "info");
+    router.push("/login");
   };
 
   const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
     }).format(val);
   };
-
   return (
     <div className="space-y-6 pb-12">
       <div className="flex items-center gap-2 mb-4">
         <Store className="w-5 h-5 text-primary" />
-        <h3 className="font-extrabold text-lg text-foreground">Profil Kantin</h3>
+        <h3 className="font-extrabold text-lg text-foreground">
+          Profil Kantin
+        </h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -77,16 +148,19 @@ export default function SellerProfilePage() {
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={currentUser.avatar || 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=150&auto=format&fit=crop&q=60'}
+              src={
+                currentUser.avatar ||
+                "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=150&auto=format&fit=crop&q=60"
+              }
               alt={currentUser.canteenName}
               className="w-24 h-24 rounded-2xl bg-muted object-cover border border-border"
             />
             <button
               onClick={() => {
                 setName(currentUser.name);
-                setCanteenName(currentUser.canteenName || '');
+                setCanteenName(currentUser.canteenName || "");
                 setContact(currentUser.contact);
-                setAvatar(currentUser.avatar || '');
+                setAvatar(currentUser.avatar || "");
                 setEditDialogOpen(true);
               }}
               className="absolute bottom-[-5px] right-[-5px] p-2 bg-primary hover:bg-primary-hover text-white rounded-xl shadow-md border border-card transition-all cursor-pointer"
@@ -97,9 +171,15 @@ export default function SellerProfilePage() {
           </div>
 
           <div>
-            <h4 className="font-extrabold text-base text-foreground">Kantin {currentUser.canteenName || 'Mencintai'}</h4>
-            <p className="text-xs text-muted-foreground mt-0.5 font-semibold text-primary">{currentUser.name} (Pemilik)</p>
-            <p className="text-[10px] text-muted-foreground font-mono mt-1">{currentUser.email}</p>
+            <h4 className="font-extrabold text-base text-foreground">
+              Kantin {currentUser.canteenName || "Mencintai"}
+            </h4>
+            <p className="text-xs text-muted-foreground mt-0.5 font-semibold text-primary">
+              {currentUser.name} (Pemilik)
+            </p>
+            <p className="text-[10px] text-muted-foreground font-mono mt-1">
+              {currentUser.email}
+            </p>
           </div>
 
           <span className="text-[10px] bg-primary/10 text-primary border border-primary/10 rounded-lg px-2.5 py-1 font-bold uppercase tracking-wider">
@@ -116,7 +196,9 @@ export default function SellerProfilePage() {
                 <DollarSign className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] text-muted-foreground uppercase font-bold">Total Pendapatan</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold">
+                  Total Pendapatan
+                </span>
                 <h4 className="text-sm sm:text-base font-extrabold text-foreground tracking-wide mt-0.5">
                   {formatRupiah(totalRevenue)}
                 </h4>
@@ -128,9 +210,11 @@ export default function SellerProfilePage() {
                 <Receipt className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] text-muted-foreground uppercase font-bold">Total Penjualan</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold">
+                  Total Penjualan
+                </span>
                 <h4 className="text-sm sm:text-base font-extrabold text-foreground tracking-wide mt-0.5">
-                  {totalOrders} Orders
+                  {completedOrdersCount} Orders
                 </h4>
               </div>
             </div>
@@ -145,23 +229,37 @@ export default function SellerProfilePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-3 bg-muted/40 rounded-2xl border border-border/40">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Nama Kantin</span>
-                <p className="font-bold text-foreground">Kantin {currentUser.canteenName || 'Mencintai'}</p>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">
+                  Nama Kantin
+                </span>
+                <p className="font-bold text-foreground">
+                  Kantin {currentUser.canteenName || "Mencintai"}
+                </p>
               </div>
 
               <div className="p-3 bg-muted/40 rounded-2xl border border-border/40">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Nama Pemilik</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">
+                  Nama Pemilik
+                </span>
                 <p className="font-bold text-foreground">{currentUser.name}</p>
               </div>
 
               <div className="p-3 bg-muted/40 rounded-2xl border border-border/40">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Email Toko</span>
-                <p className="font-bold text-foreground font-mono">{currentUser.email}</p>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">
+                  Email Toko
+                </span>
+                <p className="font-bold text-foreground font-mono">
+                  {currentUser.email}
+                </p>
               </div>
 
               <div className="p-3 bg-muted/40 rounded-2xl border border-border/40">
-                <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Kontak Toko (WhatsApp)</span>
-                <p className="font-bold text-foreground">{currentUser.contact}</p>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">
+                  Kontak Toko (WhatsApp)
+                </span>
+                <p className="font-bold text-foreground">
+                  {currentUser.contact}
+                </p>
               </div>
             </div>
 
@@ -179,7 +277,11 @@ export default function SellerProfilePage() {
       </div>
 
       {/* Edit Profile Dialog Modal */}
-      <Dialog isOpen={editDialogOpen} onClose={() => setEditDialogOpen(false)} title="Edit Profil Kantin & Toko">
+      <Dialog
+        isOpen={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        title="Edit Profil Kantin & Toko"
+      >
         <form onSubmit={handleEditSubmit} className="space-y-4">
           <div>
             <label className="text-xs font-bold text-muted-foreground block mb-1.5">

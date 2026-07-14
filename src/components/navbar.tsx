@@ -1,10 +1,9 @@
-'use client';
+"use client";
 
-import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Sun, Moon, Wallet, ArrowLeftRight } from 'lucide-react';
-import { useStore } from '@/store/useStore';
-import { useToastStore } from '@/store/useToastStore';
-import NotificationBell from '@/components/notification-bell';
+import { usePathname, useRouter } from "next/navigation";
+import { Menu, Sun, Moon, Wallet } from "lucide-react";
+import { useStore } from "@/store/useStore";
+import NotificationBell from "@/components/notification-bell";
 
 interface NavbarProps {
   setMobileOpen: (open: boolean) => void;
@@ -14,56 +13,33 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentUser = useStore((state) => state.currentUser);
-  const users = useStore((state) => state.users);
-  const login = useStore((state) => state.login);
 
   const darkMode = useStore((state) => state.darkMode);
   const setDarkMode = useStore((state) => state.setDarkMode);
-  const toast = useToastStore((state) => state.toast);
 
   if (!currentUser) return null;
 
   // Format currency
   const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
     }).format(val);
-  };
-
-  // Quick switch role utility for review convenience
-  const handleRoleSwitch = () => {
-    if (currentUser.role === 'mahasiswa') {
-      // Switch to Penjual
-      const seller = users.find(u => u.role === 'penjual');
-      if (seller) {
-        login(seller.email, 'password');
-        toast('Role disimulasikan: Penjual Kantin', 'info');
-        router.push('/penjual/dashboard');
-      }
-    } else {
-      // Switch to Mahasiswa
-      const student = users.find(u => u.role === 'mahasiswa');
-      if (student) {
-        login(student.email, 'password');
-        toast('Role disimulasikan: Mahasiswa', 'info');
-        router.push('/mahasiswa/dashboard');
-      }
-    }
   };
 
   // Get Page Title from pathname
   const getPageTitle = () => {
-    if (pathname.includes('/dashboard')) return 'Dashboard';
-    if (pathname.includes('/menu')) return pathname.includes('/mahasiswa') ? 'Daftar Kantin' : 'Kelola Menu';
-    if (pathname.includes('/cart')) return 'Keranjang Belanja';
-    if (pathname.includes('/checkout')) return 'Konfirmasi Checkout';
-    if (pathname.includes('/success')) return 'Pembayaran Sukses';
-    if (pathname.includes('/orders')) return 'Daftar Pesanan';
-    if (pathname.includes('/wallet')) return 'Dompet Saya';
-    if (pathname.includes('/profile')) return 'Profil Pengguna';
-    return 'e-Kantin';
+    if (pathname.includes("/dashboard")) return "Dashboard";
+    if (pathname.includes("/menu"))
+      return pathname.includes("/mahasiswa") ? "Daftar Kantin" : "Kelola Menu";
+    if (pathname.includes("/cart")) return "Keranjang Belanja";
+    if (pathname.includes("/checkout")) return "Konfirmasi Checkout";
+    if (pathname.includes("/success")) return "Pembayaran Sukses";
+    if (pathname.includes("/orders")) return "Daftar Pesanan";
+    if (pathname.includes("/wallet")) return "Dompet Saya";
+    if (pathname.includes("/profile")) return "Profil Pengguna";
+    return "e-Kantin";
   };
 
   return (
@@ -85,36 +61,33 @@ export default function Navbar({ setMobileOpen }: NavbarProps) {
 
       <div className="flex items-center gap-2 md:gap-4">
         {/* Student Balance Shortcut */}
-        {currentUser.role === 'mahasiswa' && (
+        {currentUser.role === "mahasiswa" && (
           <button
-            onClick={() => router.push('/mahasiswa/wallet')}
+            onClick={() => router.push("/mahasiswa/wallet")}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-background hover:bg-muted hover:border-primary/30 transition-all text-sm group shrink-0"
           >
             <Wallet className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
             <div className="text-left leading-none">
-              <span className="text-[10px] text-muted-foreground block">Saldo Saya</span>
-              <span className="font-semibold text-xs tracking-wide">{formatRupiah(currentUser.balance)}</span>
+              <span className="text-[10px] text-muted-foreground block">
+                Saldo Saya
+              </span>
+              <span className="font-semibold text-xs tracking-wide">
+                {formatRupiah(currentUser.balance)}
+              </span>
             </div>
           </button>
         )}
-
-        {/* Developer Sandbox Role Switcher */}
-        <button
-          onClick={handleRoleSwitch}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all shadow-xs shrink-0"
-          title="Klik untuk berpindah role demo secara cepat"
-        >
-          <ArrowLeftRight className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Ganti ke {currentUser.role === 'mahasiswa' ? 'Penjual' : 'Mahasiswa'}</span>
-          <span className="md:hidden">{currentUser.role === 'mahasiswa' ? 'Penjual' : 'Mhs'}</span>
-        </button>
 
         {/* Theme Toggle */}
         <button
           onClick={() => setDarkMode(!darkMode)}
           className="p-2 rounded-xl border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
         >
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {darkMode ? (
+            <Sun className="w-4 h-4" />
+          ) : (
+            <Moon className="w-4 h-4" />
+          )}
         </button>
 
         {/* Real Notification Bell */}

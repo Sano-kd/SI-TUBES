@@ -1,93 +1,166 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardList, Store, Star, AlertCircle, XCircle } from 'lucide-react';
-import { useStore } from '@/store/useStore';
-import { useToastStore } from '@/store/useToastStore';
-import OrderTimeline from '@/components/order-timeline';
-import RatingModal from '@/components/rating-modal';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ClipboardList, Store, Star, AlertCircle, XCircle } from "lucide-react";
+import { useStore } from "@/store/useStore";
+import { useToastStore } from "@/store/useToastStore";
+import OrderTimeline from "@/components/order-timeline";
+import RatingModal from "@/components/rating-modal";
 
+interface StudentOrderItem {
+  productId: string | null;
+  productName: string;
+  price: number;
+  quantity: number;
+  image: string;
+  selectedOptions: Record<string, string>;
+  catatan: string | null;
+}
+
+interface StudentOrder {
+  id: string;
+  buyerId: string;
+  buyerName: string;
+  sellerId: string;
+  sellerName: string | null;
+  total: number;
+  serviceFee: number;
+  paymentMethod: string;
+  status:
+    | "Menunggu"
+    | "Diterima"
+    | "Diproses"
+    | "Siap Diambil"
+    | "Selesai"
+    | "Ditolak";
+  date: string;
+  rated: boolean;
+  rejectionReason: string | null;
+  items: StudentOrderItem[];
+}
 export default function StudentOrdersPage() {
   const currentUser = useStore((state) => state.currentUser);
-  const orders = useStore((state) => state.orders);
-  const users = useStore((state) => state.users);
 
-  const [ratingOrder, setRatingOrder] = useState<{ orderId: string; canteenId: string; canteenName: string } | null>(null);
+  const toast = useToastStore((state) => state.toast);
+
+  const [studentOrders, setStudentOrders] = useState<StudentOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ratingOrder, setRatingOrder] = useState<{
+    orderId: string;
+
+    canteenName: string;
+  } | null>(null);
 
   // Filter orders made by current student
-  const studentOrders = currentUser ? orders.filter(o => o.buyerId === currentUser.id) : [];
-
-  // Automatically open rating modal for completed but unrated orders
-  useEffect(() => {
+  const fetchStudentOrders = async () => {
     if (!currentUser) return;
-    const unratedCompletedOrder = studentOrders.find(o => o.status === 'Selesai' && !o.rated);
-    if (unratedCompletedOrder) {
-      const seller = users.find(u => u.id === unratedCompletedOrder.sellerId);
-      const canteenName = seller?.canteenName || 'Kantin';
-      setRatingOrder({
-        orderId: unratedCompletedOrder.id,
-        canteenId: unratedCompletedOrder.sellerId || '',
-        canteenName
-      });
+
+    try {
+      setOrdersLoading(true);
+
+      const response = await fetch(
+        `/api/orders?userId=${encodeURIComponent(currentUser.id)}`,
+        {
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Gagal mengambil data pesanan");
+      }
+
+      setStudentOrders(result.data);
+    } catch (error) {
+      console.error("GET STUDENT ORDERS ERROR:", error);
+
+      toast(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan saat mengambil pesanan",
+        "error",
+      );
+    } finally {
+      setOrdersLoading(false);
     }
-  // eslint-disable-hooks/exhaustive-deps
-  }, [orders, users, currentUser]);
+  };
+
+  useEffect(() => {
+    fetchStudentOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
 
   if (!currentUser) return null;
 
   const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
     }).format(val);
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateStr).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   // Status badges colors mapping
   const statusColors: { [key: string]: string } = {
-    Menunggu: 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/10',
-    Diterima: 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/10',
-    Diproses: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/10',
-    'Siap Diambil': 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-orange-400 border-primary/10',
-    Selesai: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/10',
-    Ditolak: 'bg-destructive/10 text-destructive border-destructive/20',
+    Menunggu:
+      "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/10",
+    Diterima:
+      "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/10",
+    Diproses:
+      "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/10",
+    "Siap Diambil":
+      "bg-primary/10 text-primary dark:bg-primary/20 dark:text-orange-400 border-primary/10",
+    Selesai:
+      "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/10",
+    Ditolak: "bg-destructive/10 text-destructive border-destructive/20",
   };
 
   return (
     <div className="space-y-6 pb-12">
       <div className="flex items-center gap-2 mb-4">
         <ClipboardList className="w-5 h-5 text-primary" />
-        <h3 className="font-extrabold text-lg text-foreground">Status & Riwayat Pesanan</h3>
+        <h3 className="font-extrabold text-lg text-foreground">
+          Status & Riwayat Pesanan
+        </h3>
       </div>
 
-      {studentOrders.length === 0 ? (
+      {ordersLoading ? (
+        <div className="bg-card border border-border rounded-2xl p-12 text-center">
+          <p className="text-sm text-muted-foreground">
+            Memuat data pesanan...
+          </p>
+        </div>
+      ) : studentOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center bg-card rounded-3xl border border-border/80 shadow-soft">
           <div className="h-14 w-14 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
             <ClipboardList className="w-7 h-7" />
           </div>
-          <h4 className="font-extrabold text-sm text-foreground">Belum ada pesanan</h4>
+          <h4 className="font-extrabold text-sm text-foreground">
+            Belum ada pesanan
+          </h4>
           <p className="text-xs text-muted-foreground mt-1 max-w-[280px] leading-relaxed">
-            Anda belum melakukan pemesanan makanan. Silahkan pilih menu di halaman Menu Kantin.
+            Anda belum melakukan pemesanan makanan. Silahkan pilih menu di
+            halaman Menu Kantin.
           </p>
         </div>
       ) : (
         <div className="space-y-6">
           {studentOrders.map((order) => {
-            const seller = users.find(u => u.id === order.sellerId);
-            const canteenName = seller?.canteenName || 'Kantin';
-            const isDitolak = order.status === 'Ditolak';
-            const isSelesai = order.status === 'Selesai';
+            const canteenName = order.sellerName || "Kantin";
+            const isDitolak = order.status === "Ditolak";
+            const isSelesai = order.status === "Selesai";
             const showRatingBtn = isSelesai && !order.rated;
 
             return (
@@ -95,7 +168,7 @@ export default function StudentOrdersPage() {
                 key={order.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`bg-card border rounded-3xl p-5 sm:p-6 shadow-soft space-y-5 ${isDitolak ? 'border-destructive/20' : 'border-border'}`}
+                className={`bg-card border rounded-3xl p-5 sm:p-6 shadow-soft space-y-5 ${isDitolak ? "border-destructive/20" : "border-border"}`}
               >
                 {/* Header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border/60">
@@ -113,7 +186,9 @@ export default function StudentOrdersPage() {
                     </div>
                   </div>
 
-                  <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${statusColors[order.status] || ''}`}>
+                  <span
+                    className={`text-[11px] font-bold px-3 py-1 rounded-full border ${statusColors[order.status] || ""}`}
+                  >
                     {order.status}
                   </span>
                 </div>
@@ -123,36 +198,64 @@ export default function StudentOrdersPage() {
                   <div className="flex items-start gap-2.5 p-3.5 bg-destructive/5 border border-destructive/20 rounded-xl">
                     <XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs font-bold text-destructive">Pesanan Ditolak</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Alasan: {order.rejectionReason}</p>
+                      <p className="text-xs font-bold text-destructive">
+                        Pesanan Ditolak
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Alasan: {order.rejectionReason}
+                      </p>
                     </div>
                   </div>
                 )}
 
                 {/* Items Summary */}
                 <div className="space-y-2">
-                  {order.items.map((item) => (
-                    <div key={item.productId} className="flex items-center justify-between text-xs">
+                  {order.items.map((item, index) => (
+                    <div
+                      key={`${order.id}-${item.productId}-${index}`}
+                      className="flex items-center justify-between text-xs"
+                    >
                       <div className="min-w-0 flex-1">
                         <span className="text-muted-foreground">
-                          {item.productName} <span className="font-bold text-foreground">x{item.quantity}</span>
+                          {item.productName}{" "}
+                          <span className="font-bold text-foreground">
+                            x{item.quantity}
+                          </span>
                         </span>
-                        {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-0.5">
-                            {Object.entries(item.selectedOptions).map(([k, v]) => (
-                              <span key={k} className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded-md">{v}</span>
-                            ))}
-                          </div>
+                        {item.selectedOptions &&
+                          Object.keys(item.selectedOptions).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {Object.entries(item.selectedOptions).map(
+                                ([k, v]) => (
+                                  <span
+                                    key={k}
+                                    className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded-md"
+                                  >
+                                    {v}
+                                  </span>
+                                ),
+                              )}
+                            </div>
+                          )}
+                        {item.catatan && (
+                          <p className="text-[10px] text-muted-foreground italic mt-0.5">
+                            📝 {item.catatan}
+                          </p>
                         )}
-                        {item.catatan && <p className="text-[10px] text-muted-foreground italic mt-0.5">📝 {item.catatan}</p>}
                       </div>
-                      <span className="font-semibold text-foreground ml-4 shrink-0">{formatRupiah(item.price * item.quantity)}</span>
+                      <span className="font-semibold text-foreground ml-4 shrink-0">
+                        {formatRupiah(item.price * item.quantity)}
+                      </span>
                     </div>
                   ))}
 
                   <div className="flex justify-between items-center pt-3 border-t border-border/40 text-xs">
-                    <span className="font-bold text-muted-foreground">Total Belanja</span>
-                    <span className="font-extrabold text-sm text-primary tracking-wide">{formatRupiah(order.total)}</span>
+                    <span className="font-bold text-muted-foreground">
+                      Total Belanja
+                    </span>
+                    <span className="font-extrabold text-sm text-primary tracking-wide">
+                      {formatRupiah(order.total)}
+                    </span>
                   </div>
                 </div>
 
@@ -170,7 +273,13 @@ export default function StudentOrdersPage() {
                 {showRatingBtn && (
                   <div className="pt-2 border-t border-border/40">
                     <button
-                      onClick={() => setRatingOrder({ orderId: order.id, canteenId: order.sellerId || '', canteenName })}
+                      onClick={() =>
+                        setRatingOrder({
+                          orderId: order.id,
+
+                          canteenName,
+                        })
+                      }
                       className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer"
                     >
                       <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -198,8 +307,10 @@ export default function StudentOrdersPage() {
           <RatingModal
             isOpen={!!ratingOrder}
             onClose={() => setRatingOrder(null)}
+            onSuccess={async () => {
+              await fetchStudentOrders();
+            }}
             orderId={ratingOrder.orderId}
-            canteenId={ratingOrder.canteenId}
             canteenName={ratingOrder.canteenName}
           />
         )}

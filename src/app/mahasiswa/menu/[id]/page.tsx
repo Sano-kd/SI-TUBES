@@ -25,6 +25,7 @@ type Product = {
   category: "Food" | "Drink" | "Dessert" | "Snack";
   price: number;
   rating: number;
+  totalRating: number;
   image: string;
   description: string;
   available: boolean;
@@ -39,7 +40,10 @@ type Product = {
 
   orderOptions?: {
     title: string;
-    options: string[];
+    options: {
+      value: string;
+      additionalPrice: number;
+    }[];
   }[];
 };
 
@@ -65,15 +69,7 @@ export default function DetailMenuPage({
   // ZUSTAND MASIH DIGUNAKAN UNTUK CART DAN RATING
   // ============================================================
 
-  const cart = useStore((state) => state.cart);
-
-  const canteenRatings = useStore((state) => state.canteenRatings);
-
-  const addToCartWithOptions = useStore((state) => state.addToCartWithOptions);
-
-  const updateCartItemOptions = useStore(
-    (state) => state.updateCartItemOptions,
-  );
+  const currentUser = useStore((state) => state.currentUser);
 
   const toast = useToastStore((state) => state.toast);
 
@@ -98,6 +94,7 @@ export default function DetailMenuPage({
   }>({});
 
   const [catatan, setCatatan] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ============================================================
   // AMBIL DETAIL PRODUCT DARI MYSQL
@@ -139,18 +136,49 @@ export default function DetailMenuPage({
   // ============================================================
 
   useEffect(() => {
-    if (isEditMode && cartItemId) {
-      const existingItem = cart.find((item) => item.id === cartItemId);
-
-      if (existingItem) {
-        setQuantity(existingItem.quantity);
-
-        setSelectedOptions(existingItem.selectedOptions || {});
-
-        setCatatan(existingItem.catatan || "");
-      }
+    if (!isEditMode || !cartItemId || !currentUser) {
+      return;
     }
-  }, [isEditMode, cartItemId, cart]);
+
+    const fetchCartItem = async () => {
+      try {
+        const response = await fetch(`/api/cart?userId=${currentUser.id}`, {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Gagal mengambil data keranjang");
+        }
+
+        const existingItem = result.data.find(
+          (item: { id: string }) => item.id === cartItemId,
+        );
+
+        if (!existingItem) {
+          throw new Error("Item keranjang tidak ditemukan");
+        }
+
+        setQuantity(existingItem.quantity);
+        setSelectedOptions(existingItem.selectedOptions || {});
+        setCatatan(existingItem.catatan || "");
+      } catch (error) {
+        console.error("FETCH EDIT CART ITEM ERROR:", error);
+
+        toast(
+          error instanceof Error
+            ? error.message
+            : "Terjadi kesalahan saat mengambil item keranjang",
+          "error",
+        );
+
+        router.push("/mahasiswa/cart");
+      }
+    };
+
+    fetchCartItem();
+  }, [isEditMode, cartItemId, currentUser, router, toast]);
 
   // ============================================================
   // LOADING
@@ -197,21 +225,7 @@ export default function DetailMenuPage({
   // RATING MASIH DARI ZUSTAND
   // ============================================================
 
-  const sellerReviews = canteenRatings.filter(
-    (rating) => rating.canteenId === product.sellerId,
-  );
-
-  const reviewCount = sellerReviews.length;
-
-  const averageRating =
-    reviewCount > 0
-      ? Number(
-          (
-            sellerReviews.reduce((sum, rating) => sum + rating.rating, 0) /
-            reviewCount
-          ).toFixed(1),
-        )
-      : product.rating;
+  const averageRating = product.rating;
 
   // ============================================================
   // FORMAT RUPIAH
@@ -240,43 +254,34 @@ export default function DetailMenuPage({
   // TOTAL PRICE
   // ============================================================
 
-  const totalPrice = product.price * quantity;
-
   // ============================================================
   // PRODUCT OPTIONS
   // ============================================================
 
-  const isFood = product.category === "Food";
+  const allOptionSections = product.orderOptions || [];
+  const additionalPricePerItem = allOptionSections.reduce(
+    (total, optionSection) => {
+      const selectedValue =
+        selectedOptions[optionSection.title] ?? optionSection.options[0]?.value;
 
-  const allOptionSections = [...(product.orderOptions || [])];
+      const selectedOption = optionSection.options.find(
+        (option) => option.value === selectedValue,
+      );
 
-  const hasNasiOption = allOptionSections.some((option) =>
-    option.title.toLowerCase().includes("nasi"),
+      return total + (selectedOption?.additionalPrice ?? 0);
+    },
+    0,
   );
 
-  if (isFood && !hasNasiOption) {
-    allOptionSections.unshift({
-      title: "Pilih Nasi",
-      options: ["Nasi Putih", "Nasi Uduk", "Tanpa Nasi"],
-    });
-  }
+  const unitPrice = product.price + additionalPricePerItem;
 
-  const hasPedasOption = allOptionSections.some((option) =>
-    option.title.toLowerCase().includes("pedas"),
-  );
-
-  if (isFood && !hasPedasOption) {
-    allOptionSections.push({
-      title: "Level Pedas",
-      options: ["Tidak Pedas", "Sedang", "Pedas", "Sangat Pedas"],
-    });
-  }
+  const totalPrice = unitPrice * quantity;
 
   // ============================================================
   // SUBMIT CART
   // ============================================================
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!product.available) {
@@ -290,29 +295,91 @@ export default function DetailMenuPage({
 
     allOptionSections.forEach((option) => {
       if (!finalOptions[option.title] && option.options.length > 0) {
-        finalOptions[option.title] = option.options[0];
+        finalOptions[option.title] = option.options[0].value;
       }
     });
 
-    const options = {
-      selectedOptions:
-        Object.keys(finalOptions).length > 0 ? finalOptions : undefined,
-
-      catatan: catatan.trim() || undefined,
-    };
-
     if (isEditMode && cartItemId) {
-      updateCartItemOptions(cartItemId, quantity, options);
+      try {
+        const response = await fetch(`/api/cart/items/${cartItemId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            quantity,
+            selectedOptions: finalOptions,
+            catatan: catatan.trim(),
+          }),
+        });
 
-      toast("Pesanan berhasil diperbarui.", "success");
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Gagal memperbarui pesanan");
+        }
+
+        toast("Pesanan berhasil diperbarui.", "success");
+        router.push("/mahasiswa/cart");
+      } catch (error) {
+        console.error("UPDATE CART ITEM ERROR:", error);
+
+        toast(
+          error instanceof Error
+            ? error.message
+            : "Terjadi kesalahan saat memperbarui pesanan",
+          "error",
+        );
+      }
+
+      return;
+    }
+    if (!currentUser) {
+      toast("Silakan login terlebih dahulu.", "error");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/cart/items", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          userId: currentUser.id,
+          productId: product.id,
+          quantity,
+          selectedOptions: finalOptions,
+          catatan: catatan.trim(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Gagal menambahkan produk ke keranjang",
+        );
+      }
+
+      toast(result.message, "success");
 
       router.push("/mahasiswa/cart");
-    } else {
-      addToCartWithOptions(product, quantity, options);
+    } catch (error) {
+      console.error("ADD CART ERROR:", error);
 
-      toast("Pesanan berhasil ditambahkan ke keranjang.", "success");
-
-      router.push("/mahasiswa/menu");
+      toast(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan saat menambahkan produk ke keranjang",
+        "error",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -382,9 +449,7 @@ export default function DetailMenuPage({
               </div>
 
               <span className="text-muted-foreground">
-                (
-                {reviewCount > 0 ? `${reviewCount} Ulasan` : "Belum ada ulasan"}
-                )
+                ({product.totalRating} Penilaian)
               </span>
             </div>
 
@@ -437,28 +502,36 @@ export default function DetailMenuPage({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {optionSection.options.map((option) => {
                     const isSelected =
-                      selectedOptions[optionSection.title] === option ||
+                      selectedOptions[optionSection.title] === option.value ||
                       (!selectedOptions[optionSection.title] &&
-                        optionSection.options[0] === option);
+                        optionSection.options[0]?.value === option.value);
 
                     return (
                       <button
-                        key={option}
+                        key={option.value}
                         type="button"
                         onClick={() =>
-                          handleOptionSelect(optionSection.title, option)
+                          handleOptionSelect(optionSection.title, option.value)
                         }
-                        className={`py-2 px-3 rounded-xl text-center text-xs font-bold transition-all border cursor-pointer flex items-center justify-between gap-1 ${
+                        className={`py-2 px-3 rounded-xl text-center text-xs font-bold transition-all border cursor-pointer flex items-center justify-between gap-2 ${
                           isSelected
                             ? "border-primary bg-primary/10 text-primary shadow-xs"
                             : "border-border bg-background text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        <span className="truncate">{option}</span>
+                        <span className="truncate">{option.value}</span>
 
-                        {isSelected && (
-                          <Check className="w-3.5 h-3.5 shrink-0 stroke-[3px]" />
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {option.additionalPrice > 0 && (
+                            <span className="text-[10px] font-bold">
+                              +{formatRupiah(option.additionalPrice)}
+                            </span>
+                          )}
+
+                          {isSelected && (
+                            <Check className="w-3.5 h-3.5 shrink-0 stroke-[3px]" />
+                          )}
+                        </div>
                       </button>
                     );
                   })}
@@ -513,7 +586,7 @@ export default function DetailMenuPage({
 
               <button
                 type="submit"
-                disabled={!product.available}
+                disabled={!product.available || isSubmitting}
                 className="flex-grow flex items-center justify-center gap-2 py-3.5 bg-primary hover:bg-primary-hover disabled:bg-zinc-200 dark:disabled:bg-zinc-800 disabled:text-muted-foreground disabled:cursor-not-allowed text-white rounded-xl text-xs font-extrabold shadow-md shadow-primary/20 hover:shadow-lg transition-all cursor-pointer"
               >
                 {isEditMode ? (

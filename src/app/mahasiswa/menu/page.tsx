@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Search, AlertCircle, Store } from "lucide-react";
 import ProductCard from "@/components/product-card";
 import { motion } from "framer-motion";
+import { Product } from "@/store/useStore";
 
 type User = {
   id: string;
@@ -15,22 +16,6 @@ type User = {
   balance: number;
   avatar: string | null;
   canteenName: string | null;
-};
-
-type Product = {
-  id: string;
-  name: string;
-  category: "Food" | "Drink" | "Dessert" | "Snack";
-  price: number;
-  rating: number;
-  image: string;
-  description: string;
-  available: boolean;
-  sellerId: string;
-  orderOptions?: {
-    title: string;
-    options: string[];
-  }[];
 };
 
 function MenuContent() {
@@ -378,7 +363,11 @@ function MenuContent() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              canteenName={selectedCanteen?.canteenName || "Kantin"}
+            />
           ))}
         </div>
       )}

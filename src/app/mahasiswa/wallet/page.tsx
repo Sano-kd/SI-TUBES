@@ -37,6 +37,41 @@ export default function StudentWalletPage() {
 
   const [transactionsLoading, setTransactionsLoading] = useState(true);
 
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch(`/api/users/${currentUser.id}`, {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || "Gagal mengambil data user terbaru",
+          );
+        }
+
+        setCurrentUser(result.data);
+      } catch (error) {
+        console.error("GET CURRENT USER ERROR:", error);
+
+        toast(
+          error instanceof Error
+            ? error.message
+            : "Terjadi kesalahan saat mengambil data user",
+          "error",
+        );
+      }
+    };
+
+    fetchCurrentUser();
+  }, [currentUser?.id, setCurrentUser, toast]);
+
   // ============================================================
   // AMBIL RIWAYAT TRANSAKSI DARI MYSQL
   // ============================================================

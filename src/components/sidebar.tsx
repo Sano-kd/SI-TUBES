@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   Home,
   UtensilsCrossed,
@@ -18,17 +19,20 @@ import {
   ChevronLeft,
   ChevronRight,
   Coffee,
-  X
-} from 'lucide-react';
-import { useStore } from '@/store/useStore';
-import { useToastStore } from '@/store/useToastStore';
+  X,
+} from "lucide-react";
+import { useStore } from "@/store/useStore";
+import { useToastStore } from "@/store/useToastStore";
 
 interface SidebarProps {
   mobileOpen?: boolean;
   setMobileOpen?: (open: boolean) => void;
 }
 
-export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarProps) {
+export default function Sidebar({
+  mobileOpen = false,
+  setMobileOpen,
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const currentUser = useStore((state) => state.currentUser);
@@ -36,6 +40,44 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
   const toggleSidebar = useStore((state) => state.toggleSidebar);
   const logout = useStore((state) => state.logout);
   const toast = useToastStore((state) => state.toast);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "mahasiswa") {
+      setCartCount(0);
+      return;
+    }
+
+    const fetchCartCount = async () => {
+      try {
+        const response = await fetch(`/api/cart?userId=${currentUser.id}`, {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Gagal mengambil jumlah keranjang");
+        }
+
+        const count = result.data.reduce(
+          (
+            total: number,
+            item: {
+              quantity: number;
+            },
+          ) => total + item.quantity,
+          0,
+        );
+
+        setCartCount(count);
+      } catch (error) {
+        console.error("GET SIDEBAR CART COUNT ERROR:", error);
+      }
+    };
+
+    fetchCartCount();
+  }, [currentUser?.id, currentUser?.role]);
 
   if (!currentUser) return null;
 
@@ -49,37 +91,40 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
   }
 
   const studentLinks: SidebarLink[] = [
-    { name: 'Beranda', href: '/mahasiswa/dashboard', icon: Home },
-    { name: 'Daftar Kantin Kampus', href: '/mahasiswa/menu', icon: Store },
-    { name: 'Keranjang', href: '/mahasiswa/cart', icon: ShoppingBag, badge: true },
-    { name: 'Dompet Saya', href: '/mahasiswa/wallet', icon: Wallet },
-    { name: 'Status Pesanan', href: '/mahasiswa/orders', icon: ClipboardList },
-    { name: 'Profil Saya', href: '/mahasiswa/profile', icon: User },
+    { name: "Beranda", href: "/mahasiswa/dashboard", icon: Home },
+    { name: "Daftar Kantin Kampus", href: "/mahasiswa/menu", icon: Store },
+    {
+      name: "Keranjang",
+      href: "/mahasiswa/cart",
+      icon: ShoppingBag,
+      badge: true,
+    },
+    { name: "Dompet Saya", href: "/mahasiswa/wallet", icon: Wallet },
+    { name: "Status Pesanan", href: "/mahasiswa/orders", icon: ClipboardList },
+    { name: "Profil Saya", href: "/mahasiswa/profile", icon: User },
   ];
 
   const sellerLinks: SidebarLink[] = [
-    { name: 'Dashboard', href: '/penjual/dashboard', icon: LayoutDashboard },
-    { name: 'Daftar Pesanan', href: '/penjual/orders', icon: Receipt },
-    { name: 'Kelola Menu', href: '/penjual/menu', icon: CookingPot },
-    { name: 'Profile Kantin', href: '/penjual/profile', icon: Store },
+    { name: "Dashboard", href: "/penjual/dashboard", icon: LayoutDashboard },
+    { name: "Daftar Pesanan", href: "/penjual/orders", icon: Receipt },
+    { name: "Kelola Menu", href: "/penjual/menu", icon: CookingPot },
+    { name: "Profile Kantin", href: "/penjual/profile", icon: Store },
   ];
 
-  const links = role === 'mahasiswa' ? studentLinks : sellerLinks;
-  const cartItems = useStore((state) => state.cart);
-  const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  const links = role === "mahasiswa" ? studentLinks : sellerLinks;
 
   const handleLogout = () => {
     logout();
-    toast('Anda telah keluar dari akun.', 'info');
-    router.push('/login');
+    toast("Anda telah keluar dari akun.", "info");
+    router.push("/login");
   };
 
   const isCollapsed = sidebarCollapsed && !mobileOpen;
 
   // Sidebar wrapper class
   const sidebarClass = `fixed md:relative top-0 bottom-0 left-0 z-40 bg-card border-r border-border h-screen flex flex-col transition-all duration-300 ease-in-out
-  ${isCollapsed ? 'w-20' : 'w-64'}
-  ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+  ${isCollapsed ? "w-20" : "w-64"}
+  ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
 `;
 
   return (
@@ -96,10 +141,11 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Logo Section */}
           <div
-            className={`border-b border-border ${isCollapsed
-              ? "h-20 flex flex-col items-center justify-center gap-2"
-              : "h-20 flex items-center justify-between px-6"
-              }`}
+            className={`border-b border-border ${
+              isCollapsed
+                ? "h-20 flex flex-col items-center justify-center gap-2"
+                : "h-20 flex items-center justify-between px-6"
+            }`}
           >
             {!isCollapsed && (
               <Link
@@ -144,20 +190,19 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
                 )}
               </button>
             )}
-            <div>
-            </div>
+            <div></div>
           </div>
 
           {/* Links Section */}
           <nav
-            className={`flex-1 overflow-y-auto ${isCollapsed
-              ? "px-3 py-5 space-y-3"
-              : "px-4 py-5 space-y-2"
-              }`}
+            className={`flex-1 overflow-y-auto ${
+              isCollapsed ? "px-3 py-5 space-y-3" : "px-4 py-5 space-y-2"
+            }`}
           >
             {links.map((link) => {
               const Icon = link.icon;
-              const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
+              const isActive =
+                pathname === link.href || pathname.startsWith(link.href + "/");
               const showBadge = link.badge && cartCount > 0;
 
               return (
@@ -166,22 +211,24 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
                   href={link.href}
                   onClick={() => setMobileOpen && setMobileOpen(false)}
                   className={`group relative flex items-center rounded-2xl transition-all duration-200 
-                    ${isCollapsed
-                      ? "justify-center h-14 rounded-xl"
-                      : "justify-start gap-4 py-3 px-5 rounded-2xl"
+                    ${
+                      isCollapsed
+                        ? "justify-center h-14 rounded-xl"
+                        : "justify-start gap-4 py-3 px-5 rounded-2xl"
                     }
-                    ${isActive
-                      ? 'bg-primary text-white font-semibold shadow-md shadow-primary/20'
-                      : 'text-muted-foreground hover:bg-orange-50 hover:text-foreground'
+                    ${
+                      isActive
+                        ? "bg-primary text-white font-semibold shadow-md shadow-primary/20"
+                        : "text-muted-foreground hover:bg-orange-50 hover:text-foreground"
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
                     <Icon
-                      className={`${isCollapsed
-                        ? "w-6 h-6"
-                        : "w-5 h-5"
-                        } shrink-0 ${isActive ? 'text-white' : 'text-muted-foreground group-hover:text-primary transition-colors'}`} />
+                      className={`${
+                        isCollapsed ? "w-6 h-6" : "w-5 h-5"
+                      } shrink-0 ${isActive ? "text-white" : "text-muted-foreground group-hover:text-primary transition-colors"}`}
+                    />
                     {!isCollapsed && (
                       <motion.span
                         initial={{ opacity: 0 }}
@@ -195,9 +242,11 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
 
                   {/* Cart/Badge Count */}
                   {showBadge && (
-                    <span className={`flex h-5 items-center justify-center rounded-full px-2 text-xs font-bold shrink-0
-                      ${isActive ? 'bg-white text-primary' : 'bg-primary text-white'}
-                    `}>
+                    <span
+                      className={`flex h-5 items-center justify-center rounded-full px-2 text-xs font-bold shrink-0
+                      ${isActive ? "bg-white text-primary" : "bg-primary text-white"}
+                    `}
+                    >
                       {cartCount}
                     </span>
                   )}
@@ -205,7 +254,8 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
                   {/* Tooltip on Collapsed */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-3 px-2 py-1 bg-zinc-950 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 whitespace-nowrap shadow-md">
-                      {link.name} {link.badge && cartCount > 0 ? `(${cartCount})` : ''}
+                      {link.name}{" "}
+                      {link.badge && cartCount > 0 ? `(${cartCount})` : ""}
                     </div>
                   )}
                 </Link>
@@ -218,9 +268,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
         <div className="border-t border-zinc-200 bg-white p-3 shrink-0">
           {/* User info */}
           {isCollapsed ? (
-
             <div className="flex flex-col items-center gap-4">
-
               {currentUser.avatar ? (
                 <img
                   src={currentUser.avatar}
@@ -240,13 +288,10 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
               >
                 <LogOut className="w-5 h-5" />
               </button>
-
             </div>
           ) : (
             <div className="space-y-4">
-
               <div className="flex items-center gap-3">
-
                 {currentUser.avatar ? (
                   <img
                     src={currentUser.avatar}
@@ -260,9 +305,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
                 )}
 
                 <div className="overflow-hidden">
-                  <p className="font-semibold truncate">
-                    {currentUser.name}
-                  </p>
+                  <p className="font-semibold truncate">{currentUser.name}</p>
 
                   <p className="text-xs text-muted-foreground">
                     {role === "mahasiswa"
@@ -270,7 +313,6 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
                       : currentUser.canteenName || "Penjual"}
                   </p>
                 </div>
-
               </div>
 
               <button
@@ -280,11 +322,10 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen }: SidebarPr
                 <LogOut className="w-4 h-4" />
                 Keluar
               </button>
-
             </div>
           )}
-        </div >
-      </aside >
+        </div>
+      </aside>
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -34,6 +34,30 @@ export default function StudentProfilePage() {
   const [name, setName] = useState(currentUser?.name || "");
   const [contact, setContact] = useState(currentUser?.contact || "");
   const [avatar, setAvatar] = useState(currentUser?.avatar || "");
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch(`/api/users/${currentUser.id}`, {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Gagal mengambil data profil");
+        }
+
+        setCurrentUser(result.data);
+      } catch (error) {
+        console.error("FETCH STUDENT PROFILE ERROR:", error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, [currentUser?.id, setCurrentUser]);
 
   if (!currentUser) return null;
 
@@ -380,10 +404,13 @@ export default function StudentProfilePage() {
               <h5 className="font-bold text-foreground mb-1">
                 4. Penyimpanan Data
               </h5>
+
               <p className="leading-relaxed">
-                Data disimpan secara lokal dalam browser Anda (localStorage)
-                sebagai simulasi. Pada implementasi nyata, data akan disimpan di
-                server yang aman dengan enkripsi standar industri.
+                Data pengguna, transaksi, pesanan, produk, dan saldo disimpan
+                dalam database sistem e-Kantin dan dikelola melalui server
+                aplikasi. Penyimpanan data dilakukan untuk mendukung proses
+                pemesanan, pembayaran, pengelolaan saldo, dan aktivitas
+                operasional sistem.
               </p>
             </div>
             <div>
